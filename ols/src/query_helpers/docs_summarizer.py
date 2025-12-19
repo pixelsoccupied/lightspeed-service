@@ -317,10 +317,6 @@ class DocsSummarizer(QueryHelper):
                         yield StreamedChunk(type="text", text=chunk)
                         break
 
-                    # check if LLM has finished generating
-                    if chunk.response_metadata.get("finish_reason") == "stop":  # type: ignore [attr-defined]
-                        return
-
                     # collect tool chunk or yield text
                     if getattr(chunk, "tool_call_chunks", None):
                         tool_call_chunks.append(chunk)
@@ -337,7 +333,7 @@ class DocsSummarizer(QueryHelper):
                 if is_final_round:
                     break
 
-                # tool calling part
+                # tool calling part - continue loop only if there are tool calls
                 if tool_call_chunks:
                     # assess tool calls and add to messages
                     tool_calls = tool_calls_from_tool_calls_chunks(tool_call_chunks)
@@ -393,6 +389,9 @@ class DocsSummarizer(QueryHelper):
                                 "round": i,
                             },
                         )
+                else:
+                    # No tool calls - LLM provided final text response, exit loop
+                    break
 
     async def generate_response(
         self,
